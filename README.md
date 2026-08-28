@@ -40,17 +40,8 @@ the coach on; add the Firebase vars to turn on Google sign-in + cloud progress.
   localStorage fallback.
 - One responsibility per file; strict TypeScript everywhere.
 
-## Git (run on Windows — repo state is measured here, never in a sandbox)
 
-```
-cd F:\classHuman\itf-patterns-trainer
-git init -b main
-git add -A
-git status          # review what's staged; .env* is ignored by .gitignore
-git commit -m "feat: ITF patterns trainer prototype (patterns data, stepper, quiz, RAG coach)"
-```
 
-Then create the private remote under MenokoOG and push from Windows.
 
 ## Known limits (prototype)
 
