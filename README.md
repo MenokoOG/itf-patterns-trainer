@@ -7,14 +7,6 @@ mode, and a RAG study coach powered by Gemini.
 **STATUS: PROTOTYPE (declared spike).** Runs locally; not hardened for
 student handoff. See CHANGELOG for what exists.
 
-## Setup (Windows, F: dev drive)
-
-One step at a time:
-
-1. `cd F:\classHuman\itf-patterns-trainer`
-2. `npm install`
-3. `copy .env.example .env.local` — then paste your keys into `.env.local` yourself.
-4. `npm run dev` → open http://localhost:3000 (test mobile view in devtools).
 
 The app runs with NO keys at all: sign-in hides itself, progress goes to
 localStorage, and the coach returns a clear 503. Add `GEMINI_API_KEY` to turn
