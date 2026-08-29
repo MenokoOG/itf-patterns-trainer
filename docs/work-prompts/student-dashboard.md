@@ -1,5 +1,10 @@
 # Work prompt — student progress dashboard
 
+> **STATUS: DELIVERED.** Merged in PR #12 (`1bfa06b`, 2026-08-29). Kept for the
+> reasoning, not as a to-do. What shipped, what changed against this prompt, and
+> what was deliberately left are recorded at the bottom under
+> [Outcome](#outcome).
+
 Hand this to `/plan`. Classify as **production**.
 
 ## Goal
@@ -56,8 +61,48 @@ history vanish. Decide the merge rule — most likely per-pattern `max` on
 
 ## Definition of done notes
 
-- This repo has **no test tooling at all** — no `test` script, no test files, and
+- ~~This repo has **no test tooling at all**~~ *(no longer true — Vitest was
+  added by this work and runs in `verify` and CI)* — no `test` script, no test files, and
   CI runs `npm ci` + `npm run verify` only. Any progress-merge logic needs tests,
   so tooling has to be chosen and added as part of this work. Say so in the plan
   rather than quietly skipping gate 1.
 - CHANGELOG entry required. ADR required if the rank model is non-obvious.
+
+---
+
+## Outcome
+
+Delivered in PR #12. `/progress` shows the patterns for a student's rank with
+practice counts and best quiz scores, what is untouched, the requirement
+sections the next grading covers, and a collapsed view of earlier ranks.
+
+**Decisions taken** (the open questions above):
+
+1. Rank is **self-selected** from the 16 syllabus ranks. Instructor assignment
+   was not built; it stays blocked on the instructor dashboard's access model.
+2. "Practised" still means "reached the final movement in the stepper". No
+   stronger threshold was added — see `follow-ups.md`.
+
+**What this prompt did not predict.** `practiced` was not merely "a counter with
+no threshold": `saveProgress` assigned `update.practiced ?? prev.practiced` while
+the stepper always passed `1`, so it was pinned at 1 forever. It now increments,
+once per run rather than once per arrival at the last movement.
+
+**Also fixed on the way past**, because `npm ci` failed on every clean checkout
+and blocked all of it: a Dependabot bump to TypeScript 7 that `typescript-eslint`
+cannot accept (PR #10), and Netlify secrets scanning failing on two non-secret
+env values (PR #11).
+
+**Deliberately not done:**
+
+- Syllabus requirements render as reference and are visibly marked untracked.
+  The app has data on patterns only, so a completion bar over sparring or theory
+  would be a lie.
+- Individual requirements are not linked to patterns. Those items are free text
+  mixing ITF and WT forms, so the join stays at rank level.
+- No ADR. Self-selected rank has no live alternative once chosen, and the merge
+  rule is documented in `src/lib/mergeProgress.ts`. **0003 is left free for the
+  instructor dashboard's access model.**
+
+**Known limits carried forward** into `follow-ups.md`: the rules are still not
+executed by any test, and `saveProgress` still read-modify-writes the whole map.
