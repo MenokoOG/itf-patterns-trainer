@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The app's entire Firestore surface is one doc per signed-in user:
+    // users/{uid} with a single `progress` field, a map keyed by pattern
+    // slug -> { practiced, quizBest, updatedAt }. See src/lib/progress.ts.
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Writes go through setDoc(..., { merge: true }), so request.resource.data
+    // is the merged post-write document. Validating it here means the stored
+    // doc can never hold anything but a `progress` map.
+    function isValidUserDoc() {
+      return request.resource.data.keys().hasOnly(['progress'])
+        && request.resource.data.progress is map
+        && request.resource.data.progress.size() <= 200;
+    }
+
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow create, update: if isOwner(uid) && isValidUserDoc();
+
+      // The app never lists users or deletes accounts.
+      allow list, delete: if false;
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
