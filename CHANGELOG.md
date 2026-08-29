@@ -23,6 +23,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   writes are shape-validated to a `progress` map of at most 200 entries; a
   catch-all match denies everything else.
 
+### Changed
+- `retrieval.ts` now scores a corpus it does not build, and normalises scores by
+  chunk length. Syllabus sections are far longer than single movements and were
+  winning on token count alone: a question about one rank pulled in unrelated
+  ranks whose sections happened to be long. On "what do I need for 7th gup?"
+  on-rank hits went from 5 of 8 to 7 of 8, the eighth being the adjacent rank.
+- The coach's system prompt names both sources and asks for Korean terms
+  alongside English where the excerpts carry them.
+
 ### Fixed
 - Broken install on a fresh clone: no lockfile was committed, so every clone
   re-resolved floating `^` ranges and got a different dependency tree.
@@ -36,6 +45,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   (it forces a reshuffle on "Try again"); lint is now clean.
 
 ### Added
+- The coach can now answer rank questions ("what do I need for 7th gup?"), not
+  only pattern questions. `src/lib/corpus.ts` builds the retrievable corpus from
+  both pattern movements and the rank syllabus: one chunk per movement, one per
+  syllabus section, since a section only means anything as a group. 1186 chunks.
+- `src/lib/syllabus.ts` and syllabus domain types.
 - `src/data/syllabus.json`: the rank syllabus for all 16 ranks (10 gup, 6 dan),
   extracted from the TITF Color Belt and Black Belt handbooks. Each rank record
   carries its belt, the rank it promotes to, and numbered requirement sections;
