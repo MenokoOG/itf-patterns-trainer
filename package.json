@@ -28,13 +28,13 @@
     "@eslint/js": "10.0.1",
     "@next/eslint-plugin-next": "16.3.3",
     "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "24.13.3",
+    "@types/node": "26.3.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.5",
     "eslint": "10.9.1",
     "eslint-plugin-react-hooks": "7.1.1",
     "tailwindcss": "4.3.3",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "typescript-eslint": "8.68.0"
   },
   "allowScripts": {
