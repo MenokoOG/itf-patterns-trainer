@@ -72,7 +72,9 @@ committed, so every clone resolves to a byte-identical tree.
 | `npm run typecheck` | `tsc --noEmit`, strict mode |
 | `npm run lint` | ESLint flat config, non-interactive |
 | `npm run lint:fix` | ESLint with `--fix` |
-| `npm run verify` | `typecheck` + `lint` + `build` — run before pushing |
+| `npm test` | Vitest, unit tests for the pure logic |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run verify` | `typecheck` + `lint` + `test` + `build` — run before pushing |
 
 To use a different port:
 
@@ -124,18 +126,19 @@ present; otherwise every Firebase export is `null` and progress falls back to
 3. **Firestore** → create a database.
 4. **Project settings → Your apps → Web app** → copy the config values into
    the `NEXT_PUBLIC_FIREBASE_*` vars above.
-5. Firestore rules (prototype — scope every document to its signed-in owner):
+5. Firestore rules live in [`firestore.rules`](firestore.rules) — do not write
+   them by hand in the console, or the next deploy will overwrite your edit.
+   They scope `users/{uid}` to its owner, deny `list` and `delete`, validate the
+   document down to a `progress` map and a `rank` from the 16 known ranks, and
+   deny everything else. Deploy them with:
 
+   ```bash
+   firebase deploy --only firestore:rules --dry-run   # check first
+   firebase deploy --only firestore:rules
    ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
-   ```
+
+   The rank list is duplicated in the rules because rules cannot import JSON;
+   `npm test` fails if it drifts from `src/lib/rank.ts`.
 
 ---
 
@@ -164,13 +167,19 @@ src/
     page.tsx                  home — patterns grouped by rank
     patterns/[slug]/page.tsx  movement stepper + full movement list
     quiz/[slug]/page.tsx      quiz mode
+    progress/page.tsx         student progress dashboard
     coach/page.tsx            coach chat UI
     api/coach/route.ts        RAG generation endpoint (server-only)
-  components/                 AuthButton, CoachChat, MovementStepper, Quiz
-  context/AuthContext.tsx     Firebase auth state (null-safe when disabled)
+  components/                 AuthButton, CoachChat, MovementStepper,
+                              ProgressDashboard, Quiz
+  context/AuthContext.tsx     Firebase auth state + sign-in progress merge
   data/patterns.json          all 27 patterns, extracted + verified from the PDF
+  data/syllabus.json          the 16 rank syllabi, from the TITF handbooks
   lib/
     patterns.ts               pattern lookup + slugging
+    syllabus.ts               rank syllabus lookup
+    rank.ts                   rank vocabulary + the patterns/syllabus join
+    mergeProgress.ts          pure merge of local into account progress
     retrieval.ts              RAG retrieval — local TF-IDF over per-movement chunks
     firebase.ts               env-guarded Firebase init
     progress.ts               Firestore when signed in, localStorage otherwise
@@ -224,14 +233,19 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
 
 ## Known limits
 
-- **Prototype, not production.** No tests, no deploy pipeline, no service
-  worker / offline support.
-- **Accepted vulnerability:** `npm audit` reports a high-severity `postcss`
-  advisory reachable only through the copy of postcss bundled inside
-  `next@15.5.24`. The only upstream fix is Next.js 16, a breaking upgrade.
-  The advisory concerns processing untrusted CSS; this app processes only its
-  own first-party stylesheets, so it is not reachable here. CI therefore fails
-  on `critical` only. **Revisit when upgrading to Next 16.**
+- **Prototype, not production.** No service worker / offline support.
+- **Partial test coverage.** Vitest covers the pure logic — progress merging,
+  the rank join, the rank vocabulary shared with `firestore.rules`. There are
+  no component or end-to-end tests, and **the Firestore rules are not executed
+  by any test**: that needs `@firebase/rules-unit-testing` and the Firebase
+  emulator. Rules changes are checked with
+  `firebase deploy --only firestore:rules --dry-run` and by hand until then.
+- **TypeScript majors are pinned.** `typescript` is held at 6.x and Dependabot
+  is told to skip its majors, because `typescript-eslint` declares
+  `typescript: ">=4.8.4 <6.1.0"` and no release yet accepts TypeScript 7. A
+  grouped bump to 7.0.2 produced a lockfile `npm ci` refused to install, which
+  broke CI and the Netlify deploy. Lift the pin when typescript-eslint
+  supports it.
 - **Install scripts are denied by default.** The `allowScripts` field in
   `package.json` explicitly denies the install scripts of `@firebase/util`,
   `@google/genai`, and `protobufjs`. All three were reviewed and are no-ops
@@ -240,7 +254,14 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
   `@google/genai` is a literal `echo`.
 - Coach answers only from pattern text — no diagrams, no video.
 - Quiz distractors are drawn from the same pattern only.
-- The Firestore rules above are prototype-grade; review before any real handoff.
+- **Rank is self-declared.** A student picks their own rank; nothing verifies
+  it against an instructor. `practiced` counts reaching the last movement in
+  the stepper, which is not the same as having practised well, and the
+  dashboard tracks patterns only — stances, sparring, self-defense and theory
+  are shown as reference and are not measured.
+- `saveProgress` reads the whole user document and writes the whole map back,
+  so a save racing the sign-in merge can clobber. Dot-path `updateDoc` would
+  remove the read-modify-write.
 
 ---
 

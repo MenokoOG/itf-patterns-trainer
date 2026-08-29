@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { Pattern } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
 import { saveProgress } from "@/lib/progress";
 
 /**
  * One movement at a time (practice view) or the full numbered list.
- * Marks the pattern practiced when the student reaches the final movement.
+ * Counts a run-through when the student reaches the final movement.
  */
 export default function MovementStepper({
   pattern,
@@ -22,10 +22,17 @@ export default function MovementStepper({
   const total = pattern.movements.length;
   const mv = pattern.movements[idx];
 
+  // `practiced` counts run-throughs, so the last movement must score once per
+  // run, not once per arrival -- otherwise Back-then-Next inflates the count.
+  // Returning to the first movement starts a new run.
+  const counted = useRef(false);
+
   function go(delta: number): void {
     const next = Math.min(total - 1, Math.max(0, idx + delta));
     setIdx(next);
-    if (next === total - 1) {
+    if (next === 0) counted.current = false;
+    if (next === total - 1 && !counted.current) {
+      counted.current = true;
       void saveProgress(user?.uid ?? null, slug, { practiced: 1 });
     }
   }

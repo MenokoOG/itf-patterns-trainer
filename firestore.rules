@@ -4,20 +4,42 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // The app's entire Firestore surface is one doc per signed-in user:
-    // users/{uid} with a single `progress` field, a map keyed by pattern
-    // slug -> { practiced, quizBest, updatedAt }. See src/lib/progress.ts.
+    // users/{uid} holding a `progress` map keyed by pattern slug ->
+    // { practiced, quizBest, updatedAt }, and the student's `rank`.
+    // See src/lib/progress.ts.
 
     function isOwner(uid) {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // The 16 ranks from src/data/syllabus.json, mirrored from src/lib/rank.ts.
+    // Rules cannot import JSON, so this list is duplicated on purpose; a test
+    // in src/lib/rank.test.ts parses this file and fails if the two drift.
+    function isValidRank(rank) {
+      return rank is string
+        && rank in [
+          '10th gup', '9th gup', '8th gup', '7th gup',
+          '6th gup', '5th gup', '4th gup', '3rd gup',
+          '2nd gup', '1st gup',
+          '1st dan', '2nd dan', '3rd dan',
+          '4th dan', '5th dan', '6th dan'
+        ];
+    }
+
     // Writes go through setDoc(..., { merge: true }), so request.resource.data
     // is the merged post-write document. Validating it here means the stored
-    // doc can never hold anything but a `progress` map.
+    // doc can never hold anything but these two fields.
+    //
+    // hasOnly() permits a subset, so a document carrying only `progress` -- as
+    // every document written before rank existed does -- stays valid. Both
+    // fields are optional individually, but nothing else may appear.
     function isValidUserDoc() {
-      return request.resource.data.keys().hasOnly(['progress'])
-        && request.resource.data.progress is map
-        && request.resource.data.progress.size() <= 200;
+      return request.resource.data.keys().hasOnly(['progress', 'rank'])
+        && (!('progress' in request.resource.data)
+            || (request.resource.data.progress is map
+                && request.resource.data.progress.size() <= 200))
+        && (!('rank' in request.resource.data)
+            || isValidRank(request.resource.data.rank));
     }
 
     match /users/{uid} {

@@ -26,6 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 ITF Patterns
               </Link>
               <div className="flex items-center gap-3 text-sm">
+                <Link href="/progress" className="rounded px-2 py-1 text-blue-300 hover:bg-zinc-800">
+                  Progress
+                </Link>
                 <Link href="/coach" className="rounded px-2 py-1 text-blue-300 hover:bg-zinc-800">
                   Coach
                 </Link>
