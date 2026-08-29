@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 ## [Unreleased]
 
 ### Security
+- Firestore rules now allow a `rank` field on `users/{uid}`, validated against
+  the same 16 rank strings the app uses. Writes go through
+  `setDoc(..., { merge: true })`, so `request.resource.data` is the merged
+  post-write document: the moment any `rank` existed, the old
+  `hasOnly(['progress'])` check would have rejected *every* progress write, not
+  just rank writes. Rules and data model therefore changed together. `hasOnly`
+  permits a subset, so documents written before rank existed stay valid, and
+  both fields are individually optional while nothing else may appear.
+  Known limit: the rules themselves are still not executed by any test. Doing
+  that needs `@firebase/rules-unit-testing` and the Firebase emulator, which
+  the instructor dashboard will need anyway; for now they are checked with
+  `firebase deploy --only firestore:rules --dry-run` and by hand.
 - `/api/coach` now requires a signed-in user. The endpoint spends money on
   every call and had no auth and no rate limiting, so anyone who found it
   could drain the Gemini quota. Requests must carry a Firebase ID token,
@@ -24,6 +36,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   catch-all match denies everything else.
 
 ### Changed
+- `practiced` counts run-throughs again. `saveProgress` assigned
+  `update.practiced ?? prev.practiced` and the stepper always passed `1`, so
+  the value was pinned at 1 forever — a boolean wearing a counter's name. It
+  now adds, and the stepper scores once per run rather than once per arrival at
+  the last movement, so stepping Back then Next no longer inflates the count.
+  Reaching the first movement again starts a new run. This still only means
+  "reached the final movement"; it does not verify every movement was seen.
 - `retrieval.ts` now scores a corpus it does not build, and normalises scores by
   chunk length. Syllabus sections are far longer than single movements and were
   winning on token count alone: a question about one rank pulled in unrelated
@@ -33,6 +52,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   alongside English where the excerpts carry them.
 
 ### Fixed
+- Signing in no longer throws away signed-out progress. `loadProgress` returned
+  the Firestore document and never looked at the local map, so a student who
+  practised for a week and then signed in watched the history vanish.
+  `mergeLocalIntoAccount` now folds the local map into the account once per
+  sign-in, from `AuthContext`, so it happens no matter which page the student
+  lands on; readers wait on an `AuthContext.ready` flag rather than reading a
+  half-merged account.
+  The merge takes the per-pattern `max` of `practiced`, `quizBest`, and
+  `updatedAt` rather than summing, because it must be idempotent — it runs on
+  every sign-in and a failed-then-retried write must not double-count. The cost
+  is that practising the same pattern both signed-out and signed-in collapses
+  the two runs instead of adding them; an undercount is the safe direction.
+  Local state is cleared only after the write resolves, so a failure leaves the
+  local copy intact for the next attempt.
+  Known limit: `saveProgress` still reads the whole document and writes the
+  whole map back, so a save racing the merge can clobber. Moving to `updateDoc`
+  with a `progress.<slug>` dot path would remove the read-modify-write; that is
+  a separate change.
 - Broken install on a fresh clone: no lockfile was committed, so every clone
   re-resolved floating `^` ranges and got a different dependency tree.
   `package-lock.json` is now committed and direct dependencies are pinned to
@@ -45,6 +82,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   (it forces a reshuffle on "Try again"); lint is now clean.
 
 ### Added
+- Student progress dashboard at `/progress`: the patterns for your rank with
+  practice counts and best quiz scores, what is untouched, the requirement
+  sections your next grading covers, and a collapsed view of earlier ranks
+  (grading tests retention, not only new material). Works signed-out from
+  `localStorage`, like the rest of the app.
+  The syllabus requirements are shown as reference and marked untracked on
+  purpose. The app has data on patterns only — it knows nothing about a
+  student's stances, sparring, self-defense, or theory — so a completion bar
+  over them would be a lie.
+- A student's rank on `users/{uid}`, self-selected from the 16 syllabus ranks.
+  Rank cannot be inferred from progress: practising Do-San does not make
+  someone 7th gup, an examiner does. Stored as the canonical syllabus string so
+  it joins `syllabus.json` with no transformation.
+- `src/lib/rank.ts`: the rank vocabulary plus the join between the two data
+  files that spell ranks differently — `syllabus.json` says "9th gup",
+  `patterns.json` says "Yellow Tip / 9th Gup". All 16 rank labels and all 27
+  patterns map. Individual syllabus requirements are deliberately *not* linked
+  to patterns: those items are free text mixing ITF and WT forms, so the join
+  is at rank level only.
+- Test tooling. The project had none at all: no runner, no test files, and CI
+  ran `npm ci` + `npm run verify`. Vitest now runs as part of `verify` and in
+  CI, covering the progress merge (including its idempotence), the rank join
+  across every pattern in the data, and the rank vocabulary. `firestore.rules`
+  cannot import JSON, so its rank list is duplicated from `rank.ts`; a test
+  parses the rules file and fails if the two drift.
 - The coach can now answer rank questions ("what do I need for 7th gup?"), not
   only pattern questions. `src/lib/corpus.ts` builds the retrievable corpus from
   both pattern movements and the rank syllabus: one chunk per movement, one per

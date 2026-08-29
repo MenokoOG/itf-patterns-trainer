@@ -14,10 +14,13 @@ import {
   type User,
 } from "firebase/auth";
 import { firebaseAuth, firebaseEnabled, googleProvider } from "@/lib/firebase";
+import { mergeLocalIntoAccount } from "@/lib/progress";
 
 interface AuthState {
   user: User | null;
   enabled: boolean;
+  /** False while a sign-in merge is still folding local progress in. */
+  ready: boolean;
   signIn: () => Promise<void>;
   signOutUser: () => Promise<void>;
 }
@@ -25,17 +28,29 @@ interface AuthState {
 const AuthCtx = createContext<AuthState>({
   user: null,
   enabled: false,
+  ready: true,
   signIn: async () => {},
   signOutUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [ready, setReady] = useState(true);
 
   useEffect(() => {
     const auth = firebaseAuth();
     if (!auth) return;
-    return onAuthStateChanged(auth, setUser);
+    // Progress written while signed out lives in localStorage. Fold it into the
+    // account here, on the transition into a signed-in state, so it happens
+    // once per sign-in no matter which page the student lands on -- a student
+    // who signs in and goes straight to a pattern must not see a half-merged
+    // view. `ready` gates readers until it resolves.
+    return onAuthStateChanged(auth, (next) => {
+      setUser(next);
+      if (!next) return;
+      setReady(false);
+      void mergeLocalIntoAccount(next.uid).finally(() => setReady(true));
+    });
   }, []);
 
   async function signIn(): Promise<void> {
@@ -59,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthCtx.Provider value={{ user, enabled: firebaseEnabled, signIn, signOutUser }}>
+    <AuthCtx.Provider value={{ user, enabled: firebaseEnabled, ready, signIn, signOutUser }}>
       {children}
     </AuthCtx.Provider>
   );
