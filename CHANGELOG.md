@@ -5,6 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 
 ## [Unreleased]
 
+### Security
+- Firestore security rules scoped to the app's data model. The project was
+  running on the console's default open rules: any client, signed in or not,
+  could read and write every document, with a hard expiry on 2026-09-26 that
+  would then deny all requests. Reads and writes now require
+  `request.auth.uid == uid` on `users/{uid}`; `list` and `delete` are denied;
+  writes are shape-validated to a `progress` map of at most 200 entries; a
+  catch-all match denies everything else.
+
 ### Fixed
 - Broken install on a fresh clone: no lockfile was committed, so every clone
   re-resolved floating `^` ranges and got a different dependency tree.
@@ -18,6 +27,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   (it forces a reshuffle on "Try again"); lint is now clean.
 
 ### Added
+- `firestore.rules`, `firebase.json`, and `.firebaserc`, so the rules can be
+  validated and deployed from the repo rather than pasted into the console.
+- `.github/instructions/`: CodeGuard engineering standards this project is
+  reviewed against.
 - README: prerequisites, install, commands, env var reference, Gemini and
   Firebase setup, setup verification, troubleshooting, and known limits.
 - `engines` (Node >=20.9.0, npm >=10) plus `.nvmrc` and `.npmrc` with
