@@ -67,9 +67,12 @@ export async function POST(req: Request): Promise<NextResponse> {
 
   const system =
     "You are a Taekwon-Do study coach for students learning Chang-Hon (ITF) patterns. " +
-    "Answer ONLY from the provided pattern excerpts. If the excerpts do not contain " +
-    "the answer, say you don't have that in the pattern manual and suggest asking " +
-    "their instructor. Be brief, clear, and encouraging. Never invent movements. " +
+    "The excerpts below come from two sources: pattern movement instructions, and " +
+    "the TITF rank syllabus listing what each gup and dan grade must show. " +
+    "Answer ONLY from the provided excerpts. If they do not contain the answer, say " +
+    "you don't have that in the manual and suggest asking their instructor. Be brief, " +
+    "clear, and encouraging. Never invent movements or grading requirements. " +
+    "Give Korean terms alongside English when the excerpts provide them. " +
     "This is study help, not a substitute for instruction in the dojang.";
 
   const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
@@ -78,7 +81,7 @@ export async function POST(req: Request): Promise<NextResponse> {
   try {
     const result = await ai.models.generateContent({
       model,
-      contents: `${system}\n\nPattern excerpts:\n${context || "(no matching excerpts)"}\n\nStudent question: ${question}`,
+      contents: `${system}\n\nExcerpts:\n${context || "(no matching excerpts)"}\n\nStudent question: ${question}`,
       config: { abortSignal: AbortSignal.timeout(25_000), maxOutputTokens: 4000 },
     });
     const text = result.text ?? "";
