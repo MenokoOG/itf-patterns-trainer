@@ -1,0 +1,28 @@
+# Netlify build configuration.
+#
+# Build command and publish directory are intentionally omitted: Netlify's
+# Next.js runtime detects them, and pinning them here would silently diverge
+# from `npm run build`.
+#
+# Secrets scanning compares the *values* of configured environment variables
+# against the repo and the build output, and fails the build on any match.
+# Two of ours match on purpose and are not secrets:
+#
+#   GEMINI_MODEL                     a model name ("gemini-2.5-flash"), documented
+#                                    in the README and used as the fallback in
+#                                    src/app/api/coach/route.ts.
+#   NEXT_PUBLIC_FIREBASE_PROJECT_ID  the Firebase project id, committed in
+#                                    .firebaserc so `firebase deploy` resolves a
+#                                    project without extra flags.
+#
+# The remaining NEXT_PUBLIC_FIREBASE_* values are listed because every
+# NEXT_PUBLIC_* value is embedded in the browser bundle by design -- that is how
+# Firebase web config works, and the README says so. Firebase web API keys are
+# public identifiers; the access boundary is firestore.rules plus the authorised
+# domain list, not the secrecy of the key.
+#
+# GEMINI_API_KEY is a real secret, is server-side only, and is deliberately NOT
+# listed. If the scanner ever finds it in build output, the build should fail.
+
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "GEMINI_MODEL,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID"
