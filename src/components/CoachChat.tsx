@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 interface Turn {
   role: "student" | "coach";
@@ -8,6 +9,7 @@ interface Turn {
 }
 
 export default function CoachChat({ pattern }: { pattern?: string }) {
+  const { user, enabled, signIn } = useAuth();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,14 +17,17 @@ export default function CoachChat({ pattern }: { pattern?: string }) {
 
   async function ask(): Promise<void> {
     const question = input.trim();
-    if (!question || busy) return;
+    if (!question || busy || !user) return;
     setInput("");
     setTurns((t) => [...t, { role: "student", text: question }]);
     setBusy(true);
     try {
+      // Sent on every request: tokens are short-lived, and the SDK refreshes
+      // from cache, so this is cheap and avoids replaying a stale token.
+      const token = await user.getIdToken();
       const res = await fetch("/api/coach", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ question, pattern }),
         signal: AbortSignal.timeout(30_000),
       });
@@ -67,29 +72,46 @@ export default function CoachChat({ pattern }: { pattern?: string }) {
         {busy && <p className="text-sm text-zinc-500">Coach is thinking…</p>}
         <div ref={bottomRef} />
       </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void ask();
-        }}
-        className="sticky bottom-0 flex gap-2 bg-zinc-950 py-2"
-      >
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask the coach…"
-          aria-label="Question for the coach"
-          maxLength={1000}
-          className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-3 text-sm placeholder:text-zinc-500"
-        />
-        <button
-          type="submit"
-          disabled={busy || !input.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white disabled:opacity-40"
+      {!enabled ? (
+        <p className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-400">
+          The coach is unavailable because sign-in is not configured.
+        </p>
+      ) : !user ? (
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-400">
+          <p>Sign in to ask the coach. The rest of the trainer works without an account.</p>
+          <button
+            type="button"
+            onClick={() => void signIn()}
+            className="mt-3 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white"
+          >
+            Sign in
+          </button>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void ask();
+          }}
+          className="sticky bottom-0 flex gap-2 bg-zinc-950 py-2"
         >
-          Ask
-        </button>
-      </form>
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask the coach…"
+            aria-label="Question for the coach"
+            maxLength={1000}
+            className="min-w-0 flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-3 text-sm placeholder:text-zinc-500"
+          />
+          <button
+            type="submit"
+            disabled={busy || !input.trim()}
+            className="rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white disabled:opacity-40"
+          >
+            Ask
+          </button>
+        </form>
+      )}
     </div>
   );
 }

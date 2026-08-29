@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { retrieve } from "@/lib/retrieval";
+import { bearerFrom, verifyIdToken } from "@/lib/verifyIdToken";
+import { rateLimit } from "@/lib/rateLimit";
 
 /**
  * RAG coach endpoint. Retrieval is local (lexical over pattern data);
  * generation is Gemini. External call policy: 25s timeout, no retry
  * (student just re-asks), errors returned as structured JSON.
+ *
+ * Access: sign-in required. The endpoint spends money on every call, so it is
+ * gated on a verified Firebase ID token and rate limited per uid. The rest of
+ * the app stays sign-in free; only the coach costs anything to serve.
  */
 
 export const runtime = "nodejs";
@@ -16,6 +22,8 @@ interface CoachRequest {
 }
 
 const MAX_QUESTION_LEN = 1000;
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 5 * 60 * 1000;
 
 export async function POST(req: Request): Promise<NextResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -23,6 +31,19 @@ export async function POST(req: Request): Promise<NextResponse> {
     return NextResponse.json(
       { error: "Coach is not configured (missing GEMINI_API_KEY)." },
       { status: 503 },
+    );
+  }
+
+  const user = await verifyIdToken(bearerFrom(req));
+  if (!user) {
+    return NextResponse.json({ error: "Sign in to ask the coach." }, { status: 401 });
+  }
+
+  const limit = rateLimit(user.uid, RATE_LIMIT, RATE_WINDOW_MS);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "You have asked a lot of questions just now. Try again shortly." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
     );
   }
 

@@ -19,6 +19,7 @@
   "dependencies": {
     "@google/genai": "1.52.0",
     "firebase": "12.18.0",
+    "jose": "6.2.10",
     "next": "15.5.24",
     "react": "19.2.8",
     "react-dom": "19.2.8"

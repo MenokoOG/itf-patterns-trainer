@@ -5,6 +5,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 
 ## [Unreleased]
 
+### Security
+- `/api/coach` now requires a signed-in user. The endpoint spends money on
+  every call and had no auth and no rate limiting, so anyone who found it
+  could drain the Gemini quota. Requests must carry a Firebase ID token,
+  verified server-side against Google's public keys, and are capped at 20 per
+  5 minutes per uid. Verification uses `jose` rather than `firebase-admin`
+  specifically to avoid provisioning a service-account private key. The rest
+  of the app stays sign-in free.
+  Known limit: the rate limiter is in-memory, so it resets on cold start and
+  is not shared across instances.
+- Firestore security rules scoped to the app's data model. The project was
+  running on the console's default open rules: any client, signed in or not,
+  could read and write every document, with a hard expiry on 2026-09-26 that
+  would then deny all requests. Reads and writes now require
+  `request.auth.uid == uid` on `users/{uid}`; `list` and `delete` are denied;
+  writes are shape-validated to a `progress` map of at most 200 entries; a
+  catch-all match denies everything else.
+
 ### Fixed
 - Broken install on a fresh clone: no lockfile was committed, so every clone
   re-resolved floating `^` ranges and got a different dependency tree.
@@ -18,6 +36,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   (it forces a reshuffle on "Try again"); lint is now clean.
 
 ### Added
+- `firestore.rules`, `firebase.json`, and `.firebaserc`, so the rules can be
+  validated and deployed from the repo rather than pasted into the console.
+- `.github/instructions/`: CodeGuard engineering standards this project is
+  reviewed against.
 - README: prerequisites, install, commands, env var reference, Gemini and
   Firebase setup, setup verification, troubleshooting, and known limits.
 - `engines` (Node >=20.9.0, npm >=10) plus `.nvmrc` and `.npmrc` with
