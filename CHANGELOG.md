@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 ## [Unreleased]
 
 ### Security
+- `/api/coach` now requires a signed-in user. The endpoint spends money on
+  every call and had no auth and no rate limiting, so anyone who found it
+  could drain the Gemini quota. Requests must carry a Firebase ID token,
+  verified server-side against Google's public keys, and are capped at 20 per
+  5 minutes per uid. Verification uses `jose` rather than `firebase-admin`
+  specifically to avoid provisioning a service-account private key. The rest
+  of the app stays sign-in free.
+  Known limit: the rate limiter is in-memory, so it resets on cold start and
+  is not shared across instances.
 - Firestore security rules scoped to the app's data model. The project was
   running on the console's default open rules: any client, signed in or not,
   could read and write every document, with a hard expiry on 2026-09-26 that
