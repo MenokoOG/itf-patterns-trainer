@@ -36,6 +36,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   (it forces a reshuffle on "Try again"); lint is now clean.
 
 ### Added
+- `src/data/syllabus.json`: the rank syllabus for all 16 ranks (10 gup, 6 dan),
+  extracted from the TITF Color Belt and Black Belt handbooks. Each rank record
+  carries its belt, the rank it promotes to, and numbered requirement sections;
+  every entry keeps the English name and the Korean romanisation in separate
+  fields. 425 entries.
+- `tools/parse_syllabus.py`, the parser that produces it, plus the source PDFs
+  in `ITIF-Handbooks/` so the data can be regenerated and checked against its
+  source. Requires poppler's `pdftotext`.
+- `docs/adr/`, starting with the record-decisions ADR and one covering handbook
+  provenance and the extraction pipeline.
 - `firestore.rules`, `firebase.json`, and `.firebaserc`, so the rules can be
   validated and deployed from the repo rather than pasted into the console.
 - `.github/instructions/`: CodeGuard engineering standards this project is
