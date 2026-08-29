@@ -3,6 +3,38 @@
 All notable changes to this project will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 
+## [Unreleased]
+
+### Fixed
+- Broken install on a fresh clone: no lockfile was committed, so every clone
+  re-resolved floating `^` ranges and got a different dependency tree.
+  `package-lock.json` is now committed and direct dependencies are pinned to
+  exact versions.
+- `npm run lint` hung on an interactive setup prompt. `next lint` is
+  deprecated and the project had no ESLint config, so it prompted on every
+  run and blocked CI. Replaced with an ESLint flat config
+  (`eslint.config.mjs`) invoked as `eslint .`.
+- Documented the intentional `round` dependency in the `Quiz` `useMemo`
+  (it forces a reshuffle on "Try again"); lint is now clean.
+
+### Added
+- README: prerequisites, install, commands, env var reference, Gemini and
+  Firebase setup, setup verification, troubleshooting, and known limits.
+- `engines` (Node >=20.9.0, npm >=10) plus `.nvmrc` and `.npmrc` with
+  `engine-strict` and `save-exact`, so an unsupported toolchain fails fast.
+- `npm run verify` (typecheck + lint + build) as the pre-push gate.
+- GitHub Actions CI running `npm ci` + verify, plus a dependency audit job.
+- Dependabot for weekly npm and GitHub Actions updates.
+- Explicit `allowScripts` denials for the `@firebase/util`, `@google/genai`,
+  and `protobufjs` install scripts. All three were reviewed and are no-ops
+  for this project.
+
+### Security
+- Accepted risk: high-severity `postcss` advisory via the copy bundled inside
+  `next@15.5.24`. Only fixable by upgrading to Next 16 (breaking). Not
+  reachable here — the app processes only first-party CSS. CI fails on
+  `critical` only. Revisit at the Next 16 upgrade.
+
 ## [0.1.0] - 2026-08-27
 
 ### Added

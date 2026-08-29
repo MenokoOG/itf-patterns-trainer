@@ -76,6 +76,9 @@ function buildQuestions(pattern: Pattern): Question[] {
 export default function Quiz({ pattern, slug }: { pattern: Pattern; slug: string }) {
   const { user } = useAuth();
   const [round, setRound] = useState(0);
+  // `round` is bumped by "Try again" purely to force a fresh shuffle; it is
+  // intentionally a dependency even though the callback does not read it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const questions = useMemo(() => buildQuestions(pattern), [pattern, round]);
   const [qi, setQi] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);

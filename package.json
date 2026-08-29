@@ -3,26 +3,42 @@
   "version": "0.1.0",
   "private": true,
   "description": "Mobile-first trainer for Chang-Hon ITF tuls with a RAG study coach. PROTOTYPE - not production.",
+  "engines": {
+    "node": ">=20.9.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run lint && npm run build"
   },
   "dependencies": {
-    "@google/genai": "^1.16.0",
-    "firebase": "^12.1.0",
-    "next": "^15.5.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "@google/genai": "1.52.0",
+    "firebase": "12.18.0",
+    "next": "15.5.24",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.0",
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "tailwindcss": "^4.1.0",
-    "typescript": "^5.9.0"
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "15.5.24",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "eslint": "10.9.1",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.68.0"
+  },
+  "allowScripts": {
+    "@firebase/util": false,
+    "@google/genai": false,
+    "protobufjs": false
   }
 }
