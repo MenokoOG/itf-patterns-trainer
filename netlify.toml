@@ -8,7 +8,7 @@
 # against the repo and the build output, and fails the build on any match.
 # Two of ours match on purpose and are not secrets:
 #
-#   GEMINI_MODEL                     a model name ("gemini-2.5-flash"), documented
+#   GEMINI_MODEL                     a model name ("gemini-3.6-flash"), documented
 #                                    in the README and used as the fallback in
 #                                    src/app/api/coach/route.ts.
 #   NEXT_PUBLIC_FIREBASE_PROJECT_ID  the Firebase project id, committed in

@@ -70,6 +70,13 @@ const securityHeaders = [
   // Legacy-browser fallback for the frame-ancestors directive above.
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
+  // Isolates this window from cross-origin openers, but keeps the opener
+  // relationship with popups *we* open. signInWithPopup needs that: without
+  // it the browser severs the handle and the sign-in popup cannot close
+  // itself, which logs "Cross-Origin-Opener-Policy policy would block the
+  // window.close call" and leaves an orphaned window on screen. Plain
+  // `same-origin` would harden slightly more and break sign-in.
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   // The app uses none of these; deny them rather than inherit browser defaults.
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=()" },
