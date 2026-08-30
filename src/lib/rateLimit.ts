@@ -3,7 +3,7 @@
  *
  * Scope note: state lives in the process, so it resets on cold start and is not
  * shared across serverless instances. That is enough to stop a single client
- * draining the Gemini quota, and not enough to be a hard guarantee. A durable
+ * draining the OpenAI budget, and not enough to be a hard guarantee. A durable
  * limiter (Firestore counter or Redis) is the upgrade path when this app runs
  * on more than one instance.
  */

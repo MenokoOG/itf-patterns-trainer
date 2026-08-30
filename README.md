@@ -2,7 +2,7 @@
 
 Mobile-first Next.js app for students practicing the Chang-Hon (ITF) tuls —
 all 27 patterns from Saju Jirugi to Tong-Il, with a movement stepper, quiz
-mode, and a RAG study coach powered by Gemini.
+mode, and a RAG study coach powered by OpenAI.
 
 > **STATUS: PROTOTYPE (declared spike).** Runs locally; not hardened for
 > student handoff. See [CHANGELOG.md](CHANGELOG.md) for what exists and
@@ -101,8 +101,8 @@ editing it.
 
 | Variable | Required | Enables | Notes |
 | --- | --- | --- | --- |
-| `GEMINI_API_KEY` | No | The `/api/coach` RAG coach | Server-side only, never sent to the browser. Without it the coach returns HTTP 503. |
-| `GEMINI_MODEL` | No | — | Defaults to `gemini-3.6-flash`. |
+| `OPENAI_API_KEY` | No | The `/api/coach` RAG coach | Server-side only, never sent to the browser. Without it the coach returns HTTP 503. `OPEN_AI_KEY` is accepted as an alias — that is the name the Netlify environment uses. |
+| `OPENAI_MODEL` | No | — | Defaults to `gpt-5-mini`. |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | No | Google sign-in + cloud progress | Client-side. `NEXT_PUBLIC_*` values are embedded in the browser bundle — expected for Firebase web config. |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | No | Google sign-in + cloud progress | |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | No | Google sign-in + cloud progress | |
@@ -114,11 +114,16 @@ Firebase activates only when `API_KEY`, `PROJECT_ID`, and `APP_ID` are all
 present; otherwise every Firebase export is `null` and progress falls back to
 `localStorage`.
 
-### Getting a Gemini key
+### Getting an OpenAI key
 
-1. Open [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. Create an API key.
-3. Put it in `.env.local` as `GEMINI_API_KEY=...`.
+1. Open the [OpenAI API keys page](https://platform.openai.com/api-keys).
+2. Create a secret key for the project you want billed.
+3. Put it in `.env.local` as `OPENAI_API_KEY=...`.
+
+The coach is metered per question, so the project needs a positive credit
+balance. If it runs dry the endpoint returns 503 with a message telling the
+student to contact their instructor — see `isQuotaExhausted` in
+`src/lib/coachErrors.ts`.
 
 ### Firebase setup (one-time, optional)
 
@@ -155,7 +160,7 @@ Then, with the dev server running:
 curl -i -X POST http://localhost:3000/api/coach -H "Content-Type: application/json" -d "{\"question\":\"How many movements are in Chon-Ji?\"}"
 ```
 
-- **503** with `"Coach is not configured"` → no `GEMINI_API_KEY` (expected default).
+- **503** with `"Coach is not configured"` → no `OPENAI_API_KEY` (expected default).
 - **200** with an `answer` and `sources` → the coach is live.
 
 ---
@@ -195,7 +200,7 @@ into the UI.
 
 **RAG design:** retrieval is deterministic and offline (lexical TF-IDF over
 per-movement chunks), so it can be swapped for embeddings later without
-changing callers. Generation is Gemini, grounded strictly on retrieved chunks,
+changing callers. Generation is OpenAI, grounded strictly on retrieved chunks,
 with a 25s timeout and structured error JSON.
 
 ---
@@ -217,8 +222,9 @@ runs `eslint .` directly. The old `next lint` prompted for setup and hung CI.
 If you still see this, you are on a stale checkout.
 
 **Coach always returns 503.**
-`GEMINI_API_KEY` is unset, or `.env.local` was added after the server started.
-Restart the dev server.
+`OPENAI_API_KEY` (or `OPEN_AI_KEY`) is unset, or `.env.local` was added after
+the server started. Restart the dev server. A 503 that mentions a usage
+allowance is a different problem: the OpenAI project is out of credit.
 
 **Sign-in button does not appear.**
 Expected when the Firebase vars are absent. Add all of `API_KEY`,

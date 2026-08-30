@@ -2,7 +2,7 @@
  * Bounded retry against a wall-clock deadline.
  *
  * Pulled out of the coach route so the policy can be tested without spending
- * Gemini quota: `now` and `sleep` are injectable, so the tests run instantly
+ * OpenAI credit: `now` and `sleep` are injectable, so the tests run instantly
  * and deterministically. The route keeps the decision of *what* is worth
  * retrying; this only decides *how many times* and *how long*.
  */

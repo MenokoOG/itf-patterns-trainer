@@ -36,6 +36,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   catch-all match denies everything else.
 
 ### Changed
+- The coach now generates with OpenAI instead of Gemini. The free Gemini tier
+  allowed 20 requests per day per model, which a single class exhausted before
+  lunch, so the endpoint spent most of its life serving the "come back
+  tomorrow" message rather than answers. `/api/coach` calls the OpenAI
+  Responses API with `gpt-5-mini` at low reasoning effort, reading
+  `OPENAI_API_KEY` and falling back to `OPEN_AI_KEY` (the name the Netlify
+  environment was configured with); the model is overridable via
+  `OPENAI_MODEL`. Retrieval, the 25s budget, the retry policy and the per-uid
+  rate limit are unchanged.
+
+  Error classification moved with it. `isDailyQuotaExhausted` is now
+  `isQuotaExhausted` and keys off `code === "insufficient_quota"` -- an
+  exhausted billing balance rather than a daily reset -- so the student is told
+  the coach needs topping up instead of being told to come back tomorrow, which
+  under OpenAI would never have been true. `isMisconfigured` gained 401 for a
+  rejected key, and `isRetryable` now covers dropped connections while still
+  excluding our own budget abort. `@google/genai` is removed.
+
 - `practiced` counts run-throughs again. `saveProgress` assigned
   `update.practiced ?? prev.practiced` and the stepper always passed `1`, so
   the value was pinned at 1 forever — a boolean wearing a counter's name. It
