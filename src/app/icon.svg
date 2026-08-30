@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ITF Patterns Trainer">
+  <rect width="64" height="64" rx="12" fill="#201810"/>
+  <!-- Gold rule and initials, matching the PULP header treatment. -->
+  <rect x="14" y="43" width="36" height="3" rx="1.5" fill="#ffd98a"/>
+  <text x="32" y="36" text-anchor="middle" fill="#ffd98a"
+        font-family="Georgia, 'Times New Roman', serif" font-size="26" font-weight="bold"
+        letter-spacing="1">ITF</text>
+</svg>

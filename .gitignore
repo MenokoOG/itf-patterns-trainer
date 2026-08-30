@@ -13,3 +13,6 @@ next-env.d.ts
 # decides to check them in.
 AGENTS.md
 CLAUDE.md
+
+# Firestore emulator log, written by `npm run test:rules`.
+firestore-debug.log

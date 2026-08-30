@@ -74,6 +74,7 @@ committed, so every clone resolves to a byte-identical tree.
 | `npm run lint:fix` | ESLint with `--fix` |
 | `npm test` | Vitest, unit tests for the pure logic |
 | `npm run test:watch` | Vitest in watch mode |
+| `npm run test:rules` | Executes `firestore.rules` against the Firestore emulator (needs Java + Firebase CLI; not in CI) |
 | `npm run verify` | `typecheck` + `lint` + `test` + `build` — run before pushing |
 
 To use a different port:
@@ -101,7 +102,7 @@ editing it.
 | Variable | Required | Enables | Notes |
 | --- | --- | --- | --- |
 | `GEMINI_API_KEY` | No | The `/api/coach` RAG coach | Server-side only, never sent to the browser. Without it the coach returns HTTP 503. |
-| `GEMINI_MODEL` | No | — | Defaults to `gemini-2.5-flash`. |
+| `GEMINI_MODEL` | No | — | Defaults to `gemini-3.6-flash`. |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | No | Google sign-in + cloud progress | Client-side. `NEXT_PUBLIC_*` values are embedded in the browser bundle — expected for Firebase web config. |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | No | Google sign-in + cloud progress | |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | No | Google sign-in + cloud progress | |
@@ -235,11 +236,11 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
 
 - **Prototype, not production.** No service worker / offline support.
 - **Partial test coverage.** Vitest covers the pure logic — progress merging,
-  the rank join, the rank vocabulary shared with `firestore.rules`. There are
-  no component or end-to-end tests, and **the Firestore rules are not executed
-  by any test**: that needs `@firebase/rules-unit-testing` and the Firebase
-  emulator. Rules changes are checked with
-  `firebase deploy --only firestore:rules --dry-run` and by hand until then.
+  the rank join, the rank vocabulary shared with `firestore.rules` — and
+  `npm run test:rules` executes the rules themselves against the Firestore
+  emulator. There are still no component or end-to-end tests. The rules suite
+  needs Java and the Firebase CLI, so it is deliberately outside `npm test`
+  and does not run in CI; run it by hand when you touch `firestore.rules`.
 - **TypeScript majors are pinned.** `typescript` is held at 6.x and Dependabot
   is told to skip its majors, because `typescript-eslint` declares
   `typescript: ">=4.8.4 <6.1.0"` and no release yet accepts TypeScript 7. A

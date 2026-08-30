@@ -75,7 +75,17 @@ export async function POST(req: Request): Promise<NextResponse> {
     "Give Korean terms alongside English when the excerpts provide them. " +
     "This is study help, not a substitute for instruction in the dojang.";
 
-  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  // Keep this in step with GEMINI_MODEL wherever the app is deployed. Google
+  // retires models: gemini-2.5-flash started returning 404 ("no longer
+  // available to new users"), which surfaced here as a blanket 502.
+  //
+  // This is a thinking model, and thinking tokens are charged against
+  // maxOutputTokens alongside the answer. Measured on a representative coach
+  // prompt (8 retrieved chunks): ~650-950 thinking tokens to ~100-130 of
+  // answer, so 4000 leaves roughly 3x headroom. If that budget is ever
+  // exhausted the model returns MAX_TOKENS with empty text, which is why the
+  // finish reason is logged below.
+  const model = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
   const ai = new GoogleGenAI({ apiKey });
 
   try {
@@ -86,7 +96,14 @@ export async function POST(req: Request): Promise<NextResponse> {
     });
     const text = result.text ?? "";
     if (!text) {
-      console.error("coach: empty model response", { model });
+      // finishReason separates "thinking ate the token budget" (MAX_TOKENS)
+      // from a safety block or a genuinely empty candidate. Without it every
+      // one of those looks like the same opaque 502 in the browser.
+      console.error("coach: empty model response", {
+        model,
+        finishReason: result.candidates?.[0]?.finishReason,
+        usage: result.usageMetadata,
+      });
       return NextResponse.json({ error: "The coach had no answer. Try again." }, { status: 502 });
     }
     return NextResponse.json({ answer: text, sources: chunks.map((c) => c.id) });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import type { Pattern } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
@@ -73,22 +73,62 @@ function buildQuestions(pattern: Pattern): Question[] {
   return shuffle(qs);
 }
 
+/** Never notifies: the snapshot flips once, when React swaps server for client. */
+const neverSubscribe = (): (() => void) => () => {};
+
+/**
+ * True only once hydration has happened.
+ *
+ * `useSyncExternalStore` is the hydration-safe way to ask "am I on the
+ * client": React uses the server snapshot for SSR *and* for the first client
+ * render, so the two agree, then re-renders with the client snapshot. A plain
+ * `useState(false)` + effect would do the same job but trips
+ * `react-hooks/set-state-in-effect`.
+ */
+function useHydrated(): boolean {
+  return useSyncExternalStore(
+    neverSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export default function Quiz({ pattern, slug }: { pattern: Pattern; slug: string }) {
   const { user } = useAuth();
   const [round, setRound] = useState(0);
-  // `round` is bumped by "Try again" purely to force a fresh shuffle; it is
-  // intentionally a dependency even though the callback does not read it.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const questions = useMemo(() => buildQuestions(pattern), [pattern, round]);
   const [qi, setQi] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [score, setScore] = useState(0);
-  const done = qi >= questions.length;
-  const pct = questions.length ? Math.round((score / questions.length) * 100) : 0;
+
+  // Questions are shuffled, so they must be built on the client only. This
+  // route is prerendered, so building them during render shuffles once at
+  // build time and again in the browser; the two never match and React throws
+  // a hydration error on every quiz load. Before hydration this is `null`,
+  // which renders the same placeholder on the server and on the first client
+  // render — that is what makes hydration agree.
+  //
+  // `round` is bumped by "Try again" purely to force a fresh shuffle; it is
+  // intentionally a dependency even though the callback does not read it.
+  const hydrated = useHydrated();
+  const questions = useMemo(
+    () => (hydrated ? buildQuestions(pattern) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [hydrated, pattern, round],
+  );
+
+  const total = questions?.length ?? 0;
+  // Guarded on `questions`: before they exist `qi` and `total` are both 0, and
+  // an unguarded `qi >= total` would report the quiz finished and save 0%.
+  const done = questions !== null && qi >= total;
+  const pct = total ? Math.round((score / total) * 100) : 0;
 
   useEffect(() => {
     if (done) void saveProgress(user?.uid ?? null, slug, { quizBest: pct });
   }, [done, pct, slug, user]);
+
+  if (questions === null) {
+    return <p className="pulp-meta">Building your quiz…</p>;
+  }
 
   if (done) {
     return (
