@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 import { ApiError, GoogleGenAI } from "@google/genai";
+import {
+  isDailyQuotaExhausted,
+  isMisconfigured,
+  isOverloaded,
+  isRetryable,
+  isTimeout,
+} from "@/lib/coachErrors";
 import { retrieve } from "@/lib/retrieval";
 import { withRetry } from "@/lib/retry";
 import { bearerFrom, verifyIdToken } from "@/lib/verifyIdToken";
@@ -36,50 +43,6 @@ const GENERATION_BUDGET_MS = 25_000;
 const MAX_ATTEMPTS = 3;
 /** Delay before attempt N+1. */
 const BACKOFF_MS = [500, 1500];
-
-/**
- * Upstream failures worth another attempt.
- *
- * Gemini returns 503 UNAVAILABLE ("this model is currently experiencing high
- * demand") intermittently -- reproduced at roughly one call in seven on
- * gemini-3.6-flash -- and it comes back in well under a second, so a retry is
- * cheap and usually succeeds. Without one, a single unlucky call was the whole
- * of "the coach is not working": a 654ms 502 that looked nothing like an
- * overload because every error mapped to the same message.
- *
- * 429 is deliberately absent. Gemini's 429 is quota exhaustion measured over a
- * minute or a day, so it cannot clear inside our backoff -- retrying it only
- * adds seconds to an error the student is going to see anyway. It is answered
- * immediately instead, with Retry-After.
- */
-function isRetryable(e: unknown): boolean {
-  return e instanceof ApiError && [500, 502, 503, 504].includes(e.status);
-}
-
-function isOverloaded(e: unknown): boolean {
-  return e instanceof ApiError && (e.status === 429 || e.status === 503);
-}
-
-/**
- * The endpoint is deployed fine but pointed at something it cannot use: a
- * GEMINI_MODEL Google has retired (404), a rejected key (400 API_KEY_INVALID),
- * or a key without access (403). This is the failure that hit us before, and
- * it is indistinguishable from an overload by timing alone -- a retired model
- * came back in 327ms, an overload in 654ms -- so it gets its own branch rather
- * than another anonymous 502. Retrying is pointless; only a deploy fixes it.
- *
- * 400 also covers a malformed request, which is our bug rather than our
- * config, but the advice to the student is the same either way: this one will
- * not fix itself, so tell someone.
- */
-function isMisconfigured(e: unknown): boolean {
-  return e instanceof ApiError && [400, 403, 404].includes(e.status);
-}
-
-function isTimeout(e: unknown): boolean {
-  const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
-  return msg.includes("abort") || msg.includes("timeout");
-}
 
 export async function POST(req: Request): Promise<NextResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -187,6 +150,21 @@ export async function POST(req: Request): Promise<NextResponse> {
     // Distinct statuses so the next person reading a log or a network panel
     // can tell an upstream capacity blip from a genuine fault. The blanket 502
     // is what made this one take a debugging session to identify.
+    //
+    // Checked before isOverloaded, which also matches 429: the daily ceiling
+    // is the more specific case and needs the opposite advice.
+    if (isDailyQuotaExhausted(e)) {
+      // The free tier allows 20 requests per day per model, which a class can
+      // exhaust in an afternoon. "Ask again in a moment" would be a lie -- the
+      // quota resets on a daily boundary, not in seconds.
+      return NextResponse.json(
+        {
+          error:
+            "The coach has used up today's question allowance. It will work again tomorrow -- please tell your instructor if this keeps happening.",
+        },
+        { status: 503 },
+      );
+    }
     if (isOverloaded(e)) {
       return NextResponse.json(
         { error: "The coach is busy right now. Ask again in a moment." },
