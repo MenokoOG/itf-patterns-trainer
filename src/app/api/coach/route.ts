@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { ApiError, GoogleGenAI } from "@google/genai";
+import OpenAI, { APIError } from "openai";
 import {
-  isDailyQuotaExhausted,
   isMisconfigured,
   isOverloaded,
+  isQuotaExhausted,
   isRetryable,
   isTimeout,
 } from "@/lib/coachErrors";
@@ -14,7 +14,7 @@ import { rateLimit } from "@/lib/rateLimit";
 
 /**
  * RAG coach endpoint. Retrieval is local (lexical over pattern data);
- * generation is Gemini. External call policy: 25s total budget, transient
+ * generation is OpenAI. External call policy: 25s total budget, transient
  * upstream failures retried within it, errors returned as structured JSON.
  *
  * Access: sign-in required. The endpoint spends money on every call, so it is
@@ -45,10 +45,12 @@ const MAX_ATTEMPTS = 3;
 const BACKOFF_MS = [500, 1500];
 
 export async function POST(req: Request): Promise<NextResponse> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  // OPENAI_API_KEY is the SDK's own convention; OPEN_AI_KEY is accepted
+  // because that is the name the Netlify environment was set up with.
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_AI_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Coach is not configured (missing GEMINI_API_KEY)." },
+      { error: "Coach is not configured (missing OPENAI_API_KEY)." },
       { status: 503 },
     );
   }
@@ -94,19 +96,16 @@ export async function POST(req: Request): Promise<NextResponse> {
     "Give Korean terms alongside English when the excerpts provide them. " +
     "This is study help, not a substitute for instruction in the dojang.";
 
-  // Keep this in step with GEMINI_MODEL wherever the app is deployed. Google
-  // retires models: gemini-2.5-flash started returning 404 ("no longer
-  // available to new users"), which surfaced here as a blanket 502.
-  //
-  // This is a thinking model, and thinking tokens are charged against
-  // maxOutputTokens alongside the answer. Measured on representative coach
-  // prompts (8 retrieved chunks): ~500-1150 thinking tokens to ~100-420 of
-  // answer, so 4000 leaves roughly 3x headroom. If that budget is ever
-  // exhausted the model returns MAX_TOKENS with empty text, which is why the
-  // finish reason is logged below.
-  const model = process.env.GEMINI_MODEL ?? "gemini-3.6-flash";
-  const ai = new GoogleGenAI({ apiKey });
-  const prompt = `${system}\n\nExcerpts:\n${context || "(no matching excerpts)"}\n\nStudent question: ${question}`;
+  // Keep this in step with OPENAI_MODEL wherever the app is deployed. Models
+  // get retired, and a name this project cannot reach comes back as a 404,
+  // which isMisconfigured turns into "tell your instructor" rather than the
+  // blanket 502 that cost a debugging session under Gemini.
+  const model = process.env.OPENAI_MODEL ?? "gpt-5-mini";
+  // maxRetries: 0 because withRetry below owns the retry policy. Leaving the
+  // SDK default of 2 in place would multiply out to nine upstream calls and
+  // spend the shared budget on backoff we did not choose.
+  const openai = new OpenAI({ apiKey, maxRetries: 0 });
+  const prompt = `Excerpts:\n${context || "(no matching excerpts)"}\n\nStudent question: ${question}`;
   const deadline = Date.now() + GENERATION_BUDGET_MS;
 
   try {
@@ -114,34 +113,45 @@ export async function POST(req: Request): Promise<NextResponse> {
       // Each attempt is bounded by what is left of the shared budget, so a
       // retry can never push the request past GENERATION_BUDGET_MS.
       (remainingMs) =>
-        ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: { abortSignal: AbortSignal.timeout(remainingMs), maxOutputTokens: 4000 },
-        }),
+        openai.responses.create(
+          {
+            model,
+            instructions: system,
+            input: prompt,
+            // Reasoning tokens are charged against max_output_tokens alongside
+            // the answer. Grounded recall over eight short excerpts needs very
+            // little deliberation, so low effort holds latency and cost down
+            // and leaves the budget to the answer itself.
+            reasoning: { effort: "low" },
+            max_output_tokens: 4000,
+          },
+          { signal: AbortSignal.timeout(remainingMs) },
+        ),
       {
         attempts: MAX_ATTEMPTS,
         backoffMs: BACKOFF_MS,
         deadline,
         isRetryable,
         onError: (e, attempt) => {
-          const status = e instanceof ApiError ? e.status : undefined;
+          const status = e instanceof APIError ? e.status : undefined;
           const msg = e instanceof Error ? e.message : String(e);
           console.error("coach: generation failed", { model, attempt, status, msg });
         },
       },
     );
 
-    const text = result.text ?? "";
+    const text = result.output_text.trim();
     if (!text) {
-      // finishReason separates "thinking ate the token budget" (MAX_TOKENS)
-      // from a safety block or a genuinely empty candidate. Without it every
-      // one of those looks like the same opaque 502 in the browser. Not
-      // retried: the same prompt lands in the same place.
+      // incomplete_details separates "reasoning ate the token budget"
+      // (max_output_tokens) from a content filter, and status separates both
+      // from a generation that failed outright. Without them every one of
+      // those looks like the same opaque 502 in the browser. Not retried: the
+      // same prompt lands in the same place.
       console.error("coach: empty model response", {
         model,
-        finishReason: result.candidates?.[0]?.finishReason,
-        usage: result.usageMetadata,
+        status: result.status,
+        incompleteReason: result.incomplete_details?.reason,
+        usage: result.usage,
       });
       return NextResponse.json({ error: "The coach had no answer. Try again." }, { status: 502 });
     }
@@ -151,16 +161,16 @@ export async function POST(req: Request): Promise<NextResponse> {
     // can tell an upstream capacity blip from a genuine fault. The blanket 502
     // is what made this one take a debugging session to identify.
     //
-    // Checked before isOverloaded, which also matches 429: the daily ceiling
-    // is the more specific case and needs the opposite advice.
-    if (isDailyQuotaExhausted(e)) {
-      // The free tier allows 20 requests per day per model, which a class can
-      // exhaust in an afternoon. "Ask again in a moment" would be a lie -- the
-      // quota resets on a daily boundary, not in seconds.
+    // Checked before isOverloaded, which also matches 429: an exhausted
+    // balance is the more specific case and needs the opposite advice.
+    if (isQuotaExhausted(e)) {
+      // The project is out of credit. Nothing the student does clears this and
+      // it will not fix itself overnight, so the message points at the only
+      // person who can act on it.
       return NextResponse.json(
         {
           error:
-            "The coach has used up today's question allowance. It will work again tomorrow -- please tell your instructor if this keeps happening.",
+            "The coach has run out of its usage allowance and cannot answer until it is topped up. Please tell your instructor.",
         },
         { status: 503 },
       );

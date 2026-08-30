@@ -20,10 +20,10 @@
     "test:rules": "firebase emulators:exec --only firestore --project rules-test \"vitest run --config vitest.rules.config.mts\""
   },
   "dependencies": {
-    "@google/genai": "2.19.0",
     "firebase": "12.18.0",
     "jose": "6.2.10",
     "next": "16.3.3",
+    "openai": "7.8.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -44,7 +44,6 @@
   },
   "allowScripts": {
     "@firebase/util": false,
-    "@google/genai": false,
     "protobufjs": false
   }
 }

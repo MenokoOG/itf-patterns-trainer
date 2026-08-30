@@ -8,8 +8,8 @@
 # against the repo and the build output, and fails the build on any match.
 # Two of ours match on purpose and are not secrets:
 #
-#   GEMINI_MODEL                     a model name ("gemini-3.6-flash"), documented
-#                                    in the README and used as the fallback in
+#   OPENAI_MODEL                     a model name ("gpt-5-mini"), documented in
+#                                    the README and used as the fallback in
 #                                    src/app/api/coach/route.ts.
 #   NEXT_PUBLIC_FIREBASE_PROJECT_ID  the Firebase project id, committed in
 #                                    .firebaserc so `firebase deploy` resolves a
@@ -21,8 +21,9 @@
 # public identifiers; the access boundary is firestore.rules plus the authorised
 # domain list, not the secrecy of the key.
 #
-# GEMINI_API_KEY is a real secret, is server-side only, and is deliberately NOT
-# listed. If the scanner ever finds it in build output, the build should fail.
+# OPEN_AI_KEY (also read as OPENAI_API_KEY) is a real secret, is server-side
+# only, and is deliberately NOT listed. If the scanner ever finds it in build
+# output, the build should fail.
 
 [build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "GEMINI_MODEL,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID"
+  SECRETS_SCAN_OMIT_KEYS = "OPENAI_MODEL,NEXT_PUBLIC_FIREBASE_PROJECT_ID,NEXT_PUBLIC_FIREBASE_API_KEY,NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,NEXT_PUBLIC_FIREBASE_APP_ID"
