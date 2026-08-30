@@ -81,10 +81,20 @@ def pdf_text(pdf: Path) -> str:
         sys.exit("pdftotext not found on PATH. Install poppler and retry.")
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "out.txt"
+        # -enc UTF-8 is required. pdftotext writes Latin-1 by default, so
+        # without it every degree sign, one-half and bullet in the handbooks
+        # arrives as a byte that is not valid UTF-8. Paired with the old
+        # errors="replace" below that silently produced 87 U+FFFD replacement
+        # characters in syllabus.json, which students then saw as "?" on the
+        # progress page and the coach ingested into its corpus.
         subprocess.run(
-            ["pdftotext", "-layout", str(pdf), str(out)], check=True, capture_output=True
+            ["pdftotext", "-layout", "-enc", "UTF-8", str(pdf), str(out)],
+            check=True,
+            capture_output=True,
         )
-        return out.read_text(encoding="utf-8", errors="replace")
+        # strict, not "replace": if the encoding ever regresses this should
+        # stop the extraction rather than quietly ship damaged text.
+        return out.read_text(encoding="utf-8")
 
 
 def clean(line: str) -> str:
