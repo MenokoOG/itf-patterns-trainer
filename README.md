@@ -13,7 +13,7 @@ mode, and a RAG study coach powered by OpenAI.
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-org>/itf-patterns-trainer.git
+git clone https://github.com/MenokoOG/itf-patterns-trainer.git
 cd itf-patterns-trainer
 npm ci
 npm run dev
