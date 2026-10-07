@@ -49,7 +49,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      # Fails on critical only; see README "Known limits" for the accepted
-      # high-severity transitive postcss advisory bundled inside next 15.
+      # Fails on critical only.
       - name: npm audit
         run: npm audit --audit-level=critical
