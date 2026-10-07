@@ -13,7 +13,7 @@ mode, and a RAG study coach powered by OpenAI.
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-org>/itf-patterns-trainer.git
+git clone https://github.com/MenokoOG/itf-patterns-trainer.git
 cd itf-patterns-trainer
 npm ci
 npm run dev
@@ -161,6 +161,8 @@ curl -i -X POST http://localhost:3000/api/coach -H "Content-Type: application/js
 ```
 
 - **503** with `"Coach is not configured"` → no `OPENAI_API_KEY` (expected default).
+- **401** with `"Sign in to ask the coach."` → the key is set, but the coach requires a verified Firebase ID token. Send one as `-H "Authorization: Bearer <ID token>"`.
+- **429** → more than 20 questions in 5 minutes from one account.
 - **200** with an `answer` and `sources` → the coach is live.
 
 ---
@@ -186,7 +188,12 @@ src/
     syllabus.ts               rank syllabus lookup
     rank.ts                   rank vocabulary + the patterns/syllabus join
     mergeProgress.ts          pure merge of local into account progress
-    retrieval.ts              RAG retrieval — local TF-IDF over per-movement chunks
+    corpus.ts                 what the coach may answer from: one chunk per movement, one per syllabus section
+    retrieval.ts              RAG retrieval — local TF-IDF ranking over those chunks
+    verifyIdToken.ts          Firebase ID token check against Google's public keys (jose); fails closed
+    rateLimit.ts              per-account fixed-window limiter, in memory
+    retry.ts                  bounded retry against a wall-clock deadline
+    coachErrors.ts            maps upstream failures to student-facing messages
     firebase.ts               env-guarded Firebase init
     progress.ts               Firestore when signed in, localStorage otherwise
     types.ts                  domain types
@@ -195,13 +202,14 @@ tools/parse_itf.py            one-off PDF extraction script (not part of the bui
 
 **Conventions:** one responsibility per file; strict TypeScript everywhere
 (`strict` plus `noUncheckedIndexedAccess`); every external call has an explicit
-timeout and no retry; failures degrade to local state rather than throwing
+timeout, and the coach's one paid call retries transient failures only inside its
+25s budget; failures degrade to local state rather than throwing
 into the UI.
 
 **RAG design:** retrieval is deterministic and offline (lexical TF-IDF over
 per-movement chunks), so it can be swapped for embeddings later without
 changing callers. Generation is OpenAI, grounded strictly on retrieved chunks,
-with a 25s timeout and structured error JSON.
+within a 25s total budget (up to 3 attempts), with structured error JSON. The coach needs a signed-in account and allows 20 questions per 5 minutes per account.
 
 ---
 
@@ -259,7 +267,8 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
   for this project: `@firebase/util` only acts on the `FIREBASE_WEBAPP_CONFIG`
   env var (unset here), `protobufjs` only emits a version-scheme warning, and
   `@google/genai` is a literal `echo`.
-- Coach answers only from pattern text — no diagrams, no video.
+- Coach answers only from pattern text and the rank syllabus — no diagrams, no video.
+- **The rate limiter lives in process memory.** It resets on cold start and is not shared across serverless instances, so it slows one account and is not a hard cap.
 - Quiz distractors are drawn from the same pattern only.
 - **Rank is self-declared.** A student picks their own rank; nothing verifies
   it against an instructor. `practiced` counts reaching the last movement in
