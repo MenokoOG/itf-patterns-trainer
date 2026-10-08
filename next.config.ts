@@ -9,7 +9,7 @@ import type { NextConfig } from "next";
  *
  * On `script-src 'unsafe-inline'`: the CodeGuard client-side-web-security
  * standard asks for a nonce. A nonce has to be minted per request, which means
- * every page renders dynamically — and 60 of this app's routes are prerendered
+ * every page renders dynamically, and 60 of this app's routes are prerendered
  * (all 27 patterns, all 27 quizzes, the home page). Next also emits inline
  * bootstrap and flight-data scripts on those static pages that a nonce would
  * have to cover. Paying for a nonce means giving up static rendering
@@ -22,7 +22,7 @@ import type { NextConfig } from "next";
 /**
  * Firebase Auth serves its sign-in helper iframe from the project's auth
  * domain, so the CSP has to name it. It is a NEXT_PUBLIC_* value and already
- * public — it ships in the browser bundle by design. When Firebase is not
+ * public, it ships in the browser bundle by design. When Firebase is not
  * configured the app runs sign-in-free, and the entry is simply omitted.
  */
 const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
@@ -31,8 +31,8 @@ const firebaseFrame = authDomain ? ` https://${authDomain}` : "";
 /**
  * `next dev` needs two things this policy otherwise forbids: React's dev build
  * calls `eval()` for callstack reconstruction, and hot reload opens a
- * websocket back to the dev server. Both are development-only — React never
- * calls eval in a production build, and there is no HMR socket in one — so
+ * websocket back to the dev server. Both are development-only: React never
+ * calls eval in a production build, and there is no HMR socket in one, so
  * they are granted here rather than weakening what actually ships. Verified by
  * curling the built output: neither appears in the production header.
  */

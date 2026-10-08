@@ -5,6 +5,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 
 ## [Unreleased]
 
+### Changed
+- The four TITF handbook PDFs are no longer tracked. `ITIF-Handbooks/` is
+  git-ignored and the README says how to regenerate the data from your own copies.
+- Removed em dashes from docs, comments and UI text.
+
 ### Security
 - Firestore rules now allow a `rank` field on `users/{uid}`, validated against
   the same 16 rank strings the app uses. Writes go through
@@ -56,7 +61,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 
 - `practiced` counts run-throughs again. `saveProgress` assigned
   `update.practiced ?? prev.practiced` and the stepper always passed `1`, so
-  the value was pinned at 1 forever — a boolean wearing a counter's name. It
+  the value was pinned at 1 forever, a boolean wearing a counter's name. It
   now adds, and the stepper scores once per run rather than once per arrival at
   the last movement, so stepping Back then Next no longer inflates the count.
   Reaching the first movement again starts a new run. This still only means
@@ -78,7 +83,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   lands on; readers wait on an `AuthContext.ready` flag rather than reading a
   half-merged account.
   The merge takes the per-pattern `max` of `practiced`, `quizBest`, and
-  `updatedAt` rather than summing, because it must be idempotent — it runs on
+  `updatedAt` rather than summing, because it must be idempotent, it runs on
   every sign-in and a failed-then-retried write must not double-count. The cost
   is that practising the same pattern both signed-out and signed-in collapses
   the two runs instead of adding them; an undercount is the safe direction.
@@ -106,15 +111,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
   (grading tests retention, not only new material). Works signed-out from
   `localStorage`, like the rest of the app.
   The syllabus requirements are shown as reference and marked untracked on
-  purpose. The app has data on patterns only — it knows nothing about a
-  student's stances, sparring, self-defense, or theory — so a completion bar
+  purpose. The app has data on patterns only, it knows nothing about a
+  student's stances, sparring, self-defense, or theory, so a completion bar
   over them would be a lie.
 - A student's rank on `users/{uid}`, self-selected from the 16 syllabus ranks.
   Rank cannot be inferred from progress: practising Do-San does not make
   someone 7th gup, an examiner does. Stored as the canonical syllabus string so
   it joins `syllabus.json` with no transformation.
 - `src/lib/rank.ts`: the rank vocabulary plus the join between the two data
-  files that spell ranks differently — `syllabus.json` says "9th gup",
+  files that spell ranks differently, `syllabus.json` says "9th gup",
   `patterns.json` says "Yellow Tip / 9th Gup". All 16 rank labels and all 27
   patterns map. Individual syllabus requirements are deliberately *not* linked
   to patterns: those items are free text mixing ITF and WT forms, so the join
@@ -158,7 +163,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Semver.
 ### Security
 - Accepted risk: high-severity `postcss` advisory via the copy bundled inside
   `next@15.5.24`. Only fixable by upgrading to Next 16 (breaking). Not
-  reachable here — the app processes only first-party CSS. CI fails on
+  reachable here, the app processes only first-party CSS. CI fails on
   `critical` only. Revisit at the Next 16 upgrade.
 
 ## [0.1.0] - 2026-08-27

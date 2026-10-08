@@ -1,6 +1,6 @@
 # ITF Patterns Trainer
 
-Mobile-first Next.js app for students practicing the Chang-Hon (ITF) tuls —
+Mobile-first Next.js app for students practicing the Chang-Hon (ITF) tuls,
 all 27 patterns from Saju Jirugi to Tong-Il, with a movement stepper, quiz
 mode, and a RAG study coach powered by OpenAI.
 
@@ -47,7 +47,7 @@ nvm install 24.19.0
 
 ## Install
 
-Use `npm ci` — it installs the exact tree recorded in `package-lock.json` and
+Use `npm ci`, it installs the exact tree recorded in `package-lock.json` and
 is the only supported install path:
 
 ```bash
@@ -75,7 +75,7 @@ committed, so every clone resolves to a byte-identical tree.
 | `npm test` | Vitest, unit tests for the pure logic |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run test:rules` | Executes `firestore.rules` against the Firestore emulator (needs Java + Firebase CLI; not in CI) |
-| `npm run verify` | `typecheck` + `lint` + `test` + `build` — run before pushing |
+| `npm run verify` | `typecheck` + `lint` + `test` + `build`, run before pushing |
 
 To use a different port:
 
@@ -94,16 +94,16 @@ what you need:
 cp .env.example .env.local
 ```
 
-`.env.local` is gitignored — **never commit it**. Restart the dev server after
+`.env.local` is gitignored, **never commit it**. Restart the dev server after
 editing it.
 
 ### Variables
 
 | Variable | Required | Enables | Notes |
 | --- | --- | --- | --- |
-| `OPENAI_API_KEY` | No | The `/api/coach` RAG coach | Server-side only, never sent to the browser. Without it the coach returns HTTP 503. `OPEN_AI_KEY` is accepted as an alias — that is the name the Netlify environment uses. |
-| `OPENAI_MODEL` | No | — | Defaults to `gpt-5-mini`. |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | No | Google sign-in + cloud progress | Client-side. `NEXT_PUBLIC_*` values are embedded in the browser bundle — expected for Firebase web config. |
+| `OPENAI_API_KEY` | No | The `/api/coach` RAG coach | Server-side only, never sent to the browser. Without it the coach returns HTTP 503. `OPEN_AI_KEY` is accepted as an alias, that is the name the Netlify environment uses. |
+| `OPENAI_MODEL` | No |, | Defaults to `gpt-5-mini`. |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | No | Google sign-in + cloud progress | Client-side. `NEXT_PUBLIC_*` values are embedded in the browser bundle, expected for Firebase web config. |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | No | Google sign-in + cloud progress | |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | No | Google sign-in + cloud progress | |
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | No | Google sign-in + cloud progress | |
@@ -122,7 +122,7 @@ present; otherwise every Firebase export is `null` and progress falls back to
 
 The coach is metered per question, so the project needs a positive credit
 balance. If it runs dry the endpoint returns 503 with a message telling the
-student to contact their instructor — see `isQuotaExhausted` in
+student to contact their instructor, see `isQuotaExhausted` in
 `src/lib/coachErrors.ts`.
 
 ### Firebase setup (one-time, optional)
@@ -132,7 +132,7 @@ student to contact their instructor — see `isQuotaExhausted` in
 3. **Firestore** → create a database.
 4. **Project settings → Your apps → Web app** → copy the config values into
    the `NEXT_PUBLIC_FIREBASE_*` vars above.
-5. Firestore rules live in [`firestore.rules`](firestore.rules) — do not write
+5. Firestore rules live in [`firestore.rules`](firestore.rules), do not write
    them by hand in the console, or the next deploy will overwrite your edit.
    They scope `users/{uid}` to its owner, deny `list` and `delete`, validate the
    document down to a `progress` map and a `rank` from the 16 known ranks, and
@@ -172,7 +172,7 @@ curl -i -X POST http://localhost:3000/api/coach -H "Content-Type: application/js
 ```
 src/
   app/
-    page.tsx                  home — patterns grouped by rank
+    page.tsx                  home, patterns grouped by rank
     patterns/[slug]/page.tsx  movement stepper + full movement list
     quiz/[slug]/page.tsx      quiz mode
     progress/page.tsx         student progress dashboard
@@ -189,7 +189,7 @@ src/
     rank.ts                   rank vocabulary + the patterns/syllabus join
     mergeProgress.ts          pure merge of local into account progress
     corpus.ts                 what the coach may answer from: one chunk per movement, one per syllabus section
-    retrieval.ts              RAG retrieval — local TF-IDF ranking over those chunks
+    retrieval.ts              RAG retrieval, local TF-IDF ranking over those chunks
     verifyIdToken.ts          Firebase ID token check against Google's public keys (jose); fails closed
     rateLimit.ts              per-account fixed-window limiter, in memory
     retry.ts                  bounded retry against a wall-clock deadline
@@ -198,7 +198,13 @@ src/
     progress.ts               Firestore when signed in, localStorage otherwise
     types.ts                  domain types
 tools/parse_itf.py            one-off PDF extraction script (not part of the build)
+tools/parse_syllabus.py       rebuilds data/syllabus.json from the handbook PDFs
 ```
+
+**Source PDFs are not in this repo.** The handbooks are third-party material, so
+`data/patterns.json` and `data/syllabus.json` ship as extracted data only. To
+regenerate them, put your own copies in `ITIF-Handbooks/` (git-ignored) and run
+`python tools/parse_syllabus.py`. The app does not need the PDFs to build or run.
 
 **Conventions:** one responsibility per file; strict TypeScript everywhere
 (`strict` plus `noUncheckedIndexedAccess`); every external call has an explicit
@@ -225,7 +231,7 @@ regenerated `package-lock.json`.
 Your Node is below 20.9.0. Install the version in `.nvmrc` (24.19.0).
 
 **`npm run lint` opens an interactive prompt and hangs.**
-Fixed — the project now uses an ESLint flat config (`eslint.config.mjs`) and
+Fixed, the project now uses an ESLint flat config (`eslint.config.mjs`) and
 runs `eslint .` directly. The old `next lint` prompted for setup and hung CI.
 If you still see this, you are on a stale checkout.
 
@@ -249,8 +255,8 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
 ## Known limits
 
 - **Prototype, not production.** No service worker / offline support.
-- **Partial test coverage.** Vitest covers the pure logic — progress merging,
-  the rank join, the rank vocabulary shared with `firestore.rules` — and
+- **Partial test coverage.** Vitest covers the pure logic, progress merging,
+  the rank join, the rank vocabulary shared with `firestore.rules`, and
   `npm run test:rules` executes the rules themselves against the Firestore
   emulator. There are still no component or end-to-end tests. The rules suite
   needs Java and the Firebase CLI, so it is deliberately outside `npm test`
@@ -267,13 +273,13 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
   for this project: `@firebase/util` only acts on the `FIREBASE_WEBAPP_CONFIG`
   env var (unset here), `protobufjs` only emits a version-scheme warning, and
   `@google/genai` is a literal `echo`.
-- Coach answers only from pattern text and the rank syllabus — no diagrams, no video.
+- Coach answers only from pattern text and the rank syllabus, no diagrams, no video.
 - **The rate limiter lives in process memory.** It resets on cold start and is not shared across serverless instances, so it slows one account and is not a hard cap.
 - Quiz distractors are drawn from the same pattern only.
 - **Rank is self-declared.** A student picks their own rank; nothing verifies
   it against an instructor. `practiced` counts reaching the last movement in
   the stepper, which is not the same as having practised well, and the
-  dashboard tracks patterns only — stances, sparring, self-defense and theory
+  dashboard tracks patterns only, stances, sparring, self-defense and theory
   are shown as reference and are not measured.
 - `saveProgress` reads the whole user document and writes the whole map back,
   so a save racing the sign-in merge can clobber. Dot-path `updateDoc` would
@@ -288,5 +294,5 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
    every PR via `npm ci`.
 3. If you change dependencies, commit the updated `package-lock.json` in the
    same commit.
-4. Update [CHANGELOG.md](CHANGELOG.md) — the project follows
+4. Update [CHANGELOG.md](CHANGELOG.md), the project follows
    [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semver.
