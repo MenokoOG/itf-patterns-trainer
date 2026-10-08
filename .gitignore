@@ -16,3 +16,6 @@ CLAUDE.md
 
 # Firestore emulator log, written by `npm run test:rules`.
 firestore-debug.log
+
+# Source handbooks are third-party material. Keep them local, never commit.
+ITIF-Handbooks/

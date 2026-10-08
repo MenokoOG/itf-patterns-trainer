@@ -35,7 +35,7 @@ export default function CoachChat({ pattern }: { pattern?: string }) {
       const text = res.ok && data.answer ? data.answer : (data.error ?? "Something went wrong.");
       setTurns((t) => [...t, { role: "coach", text }]);
     } catch {
-      setTurns((t) => [...t, { role: "coach", text: "Network problem — try again." }]);
+      setTurns((t) => [...t, { role: "coach", text: "Network problem, try again." }]);
     } finally {
       setBusy(false);
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,7 +52,7 @@ export default function CoachChat({ pattern }: { pattern?: string }) {
       <div className="flex flex-col gap-3.5" aria-live="polite">
         {turns.length === 0 && (
           <p className="pulp-ghost text-[15px] leading-[1.7] text-muted-deep">
-            Ask anything about the patterns — “What is movement 12 of Yul-Gok?”,
+            Ask anything about the patterns, “What is movement 12 of Yul-Gok?”,
             “Why does Chon-Ji have 19 movements?”, “Which patterns use a
             bending ready stance?”
           </p>

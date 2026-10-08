@@ -139,7 +139,7 @@ export default function ProgressDashboard() {
             return (
               <option key={r} value={r} className="text-ink">
                 {r}
-                {rec ? ` — ${rec.belt}` : ""}
+                {rec ? `, ${rec.belt}` : ""}
               </option>
             );
           })}
@@ -151,7 +151,7 @@ export default function ProgressDashboard() {
         ) : (
           <p className="relative text-[15px] leading-[1.7] text-on-ink">
             Pick your rank to see what your next grading covers. Your instructor
-            sets your rank — this is just so the app knows what to show you.
+            sets your rank, this is just so the app knows what to show you.
           </p>
         )}
         {!enabled && (
@@ -161,7 +161,7 @@ export default function ProgressDashboard() {
         )}
         {enabled && !user && (
           <p className="relative font-mono text-[11px] leading-relaxed tracking-[0.06em] text-muted">
-            Saved on this device. Sign in to keep it across devices — your
+            Saved on this device. Sign in to keep it across devices, your
             existing progress comes with you.
           </p>
         )}
@@ -192,7 +192,7 @@ export default function ProgressDashboard() {
             </div>
             <p className="mb-4 text-[13px] leading-[1.65] text-muted-deep">
               From the TITF handbook for {rank}. Only patterns are tracked by this
-              app — everything else is between you and your instructor.
+              app, everything else is between you and your instructor.
             </p>
             <ul className="flex flex-col gap-3">
               {record.sections.map((s) => (

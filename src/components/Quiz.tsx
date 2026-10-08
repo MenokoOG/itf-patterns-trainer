@@ -38,7 +38,7 @@ function buildQuestions(pattern: Pattern): Question[] {
     ).slice(0, 3);
     const options = shuffle([correct.text, ...distractors]);
     qs.push({
-      prompt: `Movement ${n} is: “${current.text}” — what comes next?`,
+      prompt: `Movement ${n} is: “${current.text}”, what comes next?`,
       options,
       answer: options.indexOf(correct.text),
     });
@@ -105,7 +105,7 @@ export default function Quiz({ pattern, slug }: { pattern: Pattern; slug: string
   // build time and again in the browser; the two never match and React throws
   // a hydration error on every quiz load. Before hydration this is `null`,
   // which renders the same placeholder on the server and on the first client
-  // render — that is what makes hydration agree.
+  // render, that is what makes hydration agree.
   //
   // `round` is bumped by "Try again" purely to force a fresh shuffle; it is
   // intentionally a dependency even though the callback does not read it.

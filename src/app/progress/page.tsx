@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ProgressDashboard from "@/components/ProgressDashboard";
 
 export const metadata: Metadata = {
-  title: "My progress — ITF Patterns Trainer",
+  title: "My progress: ITF Patterns Trainer",
   description: "Where you stand against the syllabus for your rank.",
 };
 
