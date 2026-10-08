@@ -296,3 +296,7 @@ Expected when the Firebase vars are absent. Add all of `API_KEY`,
    same commit.
 4. Update [CHANGELOG.md](CHANGELOG.md), the project follows
    [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semver.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).

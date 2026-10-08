@@ -2,6 +2,7 @@
   "name": "itf-patterns-trainer",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "description": "Mobile-first trainer for Chang-Hon ITF tuls with a RAG study coach. PROTOTYPE - not production.",
   "engines": {
     "node": ">=20.9.0",
